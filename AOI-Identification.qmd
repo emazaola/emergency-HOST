@@ -30,7 +30,7 @@ ruta_AOI <- "../data/geodata/5948.geojson"
 
 ###  Cargar el archivo en QGIS.
 
-```{r}
+```{r, echo=FALSE}
 library(sf)
 ```
 
@@ -43,7 +43,7 @@ aoi_l <- st_cast(aoi, "MULTILINESTRING")
 ```
 
 
-```{r save_MULTILINESTRING}
+```{r save_MULTILINESTRING, warning=FALSE, message=FALSE, echo=FALSE}
 st_write(
   aoi_l,
   "../process/geoprocess/aoi.geojson",
