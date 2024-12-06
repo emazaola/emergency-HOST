@@ -1,0 +1,43 @@
+---
+title: "AOI-Identification"
+author: "GISARTE"
+format: html
+---
+
+\#\@ Identificar la zona afectadas por las inundaciones
+
+## Descargar el límite del proyecto Tasking Manager para el área de interés
+
+Necesitamos centrarnos en un área de interés relacionada con las inundaciones de Rio Grande do Sul. Vamos a utilizar un límite de proyecto de Tasking Manager porque esto nos dará la seguridad de que el área ha sido bien cartografiada.
+
+Vaya a la página de exploración de proyectos de [HOT Tasking Manager](https://tasks.hotosm.org/explore?omitMapResults=1).
+
+Cambiar en el menú desplegable de «Cualquier proyecto» a **Archivado** y buscar el proyecto en el cuadro **Buscar proyectos**.
+
+En este ejercicio elegimos el ciclón Idai en el área de Nhamatanda (5948)
+
+![](images/Captura de pantalla 2024-12-05 094033.png){fig-align="center"}
+
+Elija la ficha del proyecto selecionado y desplácese hasta la parte inferior de la página del proyecto y seleccione **Download AOI** - **Descargar AOI**.
+
+![](images/Captura de pantalla 2024-12-05 094401.png){fig-align="center"}
+
+Guarde el geojson en una carpeta dedicada
+
+```{r ruta_aoi, eval=FALSE}
+ruta_AOI <- "../data/geodata/5948.geojson"
+```
+
+###  Cargar el archivo en QGIS.
+
+```{r}
+library(sf)
+```
+
+```{r load_geojson}
+aoi <- read_sf("../data/geodata/5948.geojson")
+```
+
+```{r create_MULTILINESTRING}
+aoi_l <- st_cast(aoi, "MULTILINESTRING")
+```
