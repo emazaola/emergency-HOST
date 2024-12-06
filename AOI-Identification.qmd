@@ -4,7 +4,7 @@ author: "GISARTE"
 format: html
 ---
 
-\#\@ Identificar la zona afectadas por las inundaciones
+# Identificar la zona afectadas por las inundaciones
 
 ## Descargar el límite del proyecto Tasking Manager para el área de interés
 
@@ -41,3 +41,14 @@ aoi <- read_sf("../data/geodata/5948.geojson")
 ```{r create_MULTILINESTRING}
 aoi_l <- st_cast(aoi, "MULTILINESTRING")
 ```
+
+
+```{r save_MULTILINESTRING}
+st_write(
+  aoi_l,
+  "../process/geoprocess/aoi.geojson",
+  append = FALSE
+)
+```
+
+
