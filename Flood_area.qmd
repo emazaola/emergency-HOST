@@ -1,0 +1,159 @@
+---
+title: "Flood_Area"
+author: "Gisarte"
+format: html
+---
+
+# Identificar las infraestructuras afectadas por las inundaciones
+
+## Encontrar datos sobre la extensión de las inundaciones
+
+La NASA publica datos abiertos sobre la extensión de las inundaciones.
+
+Esta página de información lleva a una página de descarga. Vaya a la página de descargas [ARIA página de descargas](https://aria-share.jpl.nasa.gov/)
+
+y seleccionar el caso a analizar.
+
+En este caso [201903-Cyclone_Idai](https://aria-share.jpl.nasa.gov/201903-Cyclone_Idai/)
+
+el producto a descarar debe ser un **.tif**. Si hay varios archivos, mirar que tenga indicación de **Flood-Map**, **FPM** o algo similar. Si hay dudas, descargarlos todos y comprobar visualizándolos en QGIS.
+
+En este caso se descarga: ARIA_FPM_Mozambique_A2_v02.tiff
+
+Se ubica en el archivo de geodata
+
+```{r ruta_flood-area, eval=FALSE}
+flood_area <- "../data/geodata/ARIA_FPM_Mozambique_A2_v0.2.tif"
+```
+
+## Abrir la zona de inundaciones
+
+```{r libraries-ARIA-Flood, echo=FALSE, message=FALSE}
+library(sf)
+library(terra)
+library(mapview)
+
+library(tidyverse)
+```
+
+
+```{r load-ARIA-Flood, echo=FALSE, message=FALSE}
+flood_area <- rast("../data/geodata/ARIA_FPM_Mozambique_A2_v0.2.tif")
+
+aoi <- vect("../data/geodata/5948.geojson")
+```
+
+
+Una vez que veas los datos en el lienzo del mapa, te darás cuenta de que estos son los primeros datos ráster que estamos utilizando en este curso. Recuerde que los rásters almacenan los datos en celdas, cada una de las cuales contiene un valor. Este raster simple tiene un valor para cada celda que puede ser 0 (no inundado) o 1 (inundado)
+
+### Comprobación visual de los datos de inundación
+
+Los datos de extensión de la inundación se calcularon comparando las imágenes de satélite anteriores a la inundación con las imágenes de «inundación» captadas el 6 de mayo de 2024. La página de información comparte que este enfoque está sujeto a imprecisiones, por lo que merece la pena realizar una comprobación visual de nuestra zona de interés.
+
+Compararemos con las imágenes Copernicus capturadas en ese momento. Vaya a [Copernicus Browser](https://browser.dataspace.copernicus.eu), seleccione 'Iniciar sesión' y 'Registrarse' para crear una cuenta.
+
+-   Seleccione la opción 'Cargar un archivo' en la parte derecha y cargue el límite del proyecto elegido (geojson).
+
+-   Cambie la fecha de la izquierda a la de la toma de los datos de ARIA. Mirar fechas próximas pasadas.
+
+-   Seleccione el icono «Descargar imagen» de la derecha.
+
+-   Seleccione «Analítica»
+
+-   Cambie el formato de la imagen a «TIFF (8 bits)»,
+
+-   Elija la resolución «Personalizada» asegurándose de que indica 10 para cada una
+
+-   Finalmente seleccione «Descargar» y guarde el archivo en la carpeta de trabajo e introdúzcalo en QGIS.
+
+
+
+### Interpretación
+
+He elegido las inundaciones causadas por el ciclón Idai en Mozambique en 2019. Acudiendo al Navegador Copérnico , he encontrado 2 cuestiones sobre las que merece la pena reflexionar.
+
+
+1. No todas las imágenes disponibles para las fechas cercanas cubren el área de estudio que he seleccionado en ARIA. Por tanto, he tenido que ir a fechas más alejadas del momento de las afecciones. Esto significa que la visualización de la zona afectada será menos nítida que si fuera en el momento justo después de las inundaciones.
+
+
+2. El sistema no me ha permitido descargar las imágenes en calidad 10 * 10, por lo que lo he hecho a otra resolución.
+
+
+La conclusión es que los recursos satelitales están muy bien pero, además de tener un flujo de trabajo establecido, hay que tener la suficiente flexibilidad para poder buscar alternativas cuando los recursos disponibles no son suficientes. Sobre todo si, como ocurre en las emergencias, las respuestas deben ser rápidas.
+
+
+## Cortar el área inundada a la zona de interés
+
+
+```{r flood_crop}
+flood_area <-  terra::crop(
+    flood_area,
+    aoi,
+    snap = "in",
+    mask = TRUE)
+# mapview(flood_area)
+```
+
+## Covertir raster a vector
+
+```{r}
+flood_poli <- as.polygons(flood_area)
+```
+
+
+```{r}
+flood_sf <- st_as_sf(flood_poli)
+
+mapview(flood_sf)
+```
+```{r}
+buffer_30m <- st_buffer(flood_sf, dist = 30)
+mapview(buffer_30m)
+```
+
+
+```{r}
+buffer_unificado <- st_union(buffer_30m)
+mapview(buffer_unificado)
+```
+
+```{r}
+buffer_final <- st_cast(buffer_unificado, "POLYGON")
+mapview(buffer_final)
+class(buffer_final)
+```
+
+```{r}
+buffer_final_sf <- st_as_sf(buffer_final)
+
+```
+
+```{r}
+library(units)
+buffer_final_sf$area <- set_units(buffer_final_sf$area, "m^2")
+
+```
+
+
+Se convierte en **numeric** para poder operar
+
+```{r}
+buffer_final_sf$area <- as.numeric(buffer_final_sf$area)
+
+```
+
+Hay un margen de seguridad para descartar zonas que sean pequeñas-
+Las zonas afectadas serán mayores que el margen de seguridad.
+
+```{r}
+margen <- 300000
+```
+
+
+```{r}
+zonas_afectadas <- buffer_final_sf  |> 
+  dplyr::filter(area > margen)
+
+```
+
+
